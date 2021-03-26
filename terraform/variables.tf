@@ -70,3 +70,13 @@ variable "active_directory_netbios_name" {
   type = string
   description = "The netbios name of the Active Directory domain, for example `consoto`"
 }
+
+#Password for the default domain admin
+variable "domadminpassword" {
+  type = string
+}
+
+#Username for the default domain admin
+variable "domadminuser" {
+  type = string
+}

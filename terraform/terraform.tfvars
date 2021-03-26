@@ -1,17 +1,19 @@
-resource_prefix = "ADLAB"
-node_location   = "westeurope"
+resource_prefix = "adsec"
+node_location   = "northeurope"
 node_count      = 2
 
 vmsize = "Standard_D2s_v3"
 
-active_directory_domain = "contoso.com"
-safemode_password = "P@ssw0rd123!"
-active_directory_netbios_name = "CONTOSO"
-
 adminuser = "adminuser"
 adminpassword = "P@ssw0rd123!"
 
+active_directory_domain = "contoso.com"
+active_directory_netbios_name = "CONTOSO"
+domadminuser = "adminuser"
+domadminpassword = "P@ssw0rd123!!!"
+safemode_password = "P@ssw0rd123!!!"
+
 tags = {
-  "Environment" = "Test"
-  "Customer" = "Test"
+  "Environment" = "lab"
+  "Customer" = "lab"
 }

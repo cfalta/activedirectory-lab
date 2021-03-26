@@ -48,6 +48,7 @@ resource "azurerm_public_ip" "windows_public_ip" {
   location            = azurerm_resource_group.windows_rg.location
   resource_group_name = azurerm_resource_group.windows_rg.name
   allocation_method   = "Dynamic"
+  domain_name_label = "${var.resource_prefix}-${format("%02d", count.index)}"
 
   tags = var.tags
 }
@@ -78,6 +79,7 @@ resource "azurerm_public_ip" "dc_public_ip" {
   location            = azurerm_resource_group.windows_rg.location
   resource_group_name = azurerm_resource_group.windows_rg.name
   allocation_method   = "Dynamic"
+  domain_name_label = "${var.resource_prefix}-dc"
   tags = var.tags
 }
 
@@ -162,7 +164,7 @@ resource "azurerm_windows_virtual_machine" "windows_vm" {
   source_image_reference {
     publisher = "MicrosoftWindowsServer"
     offer     = "WindowsServer"
-    sku       = "2016-Datacenter"
+    sku       = "2019-Datacenter"
     version   = "latest"
   }
 
@@ -173,13 +175,13 @@ resource "azurerm_windows_virtual_machine" "windows_vm" {
 
 #VM object for the DC - contrary to the member server, this one is static so there will be only a single DC
 resource "azurerm_windows_virtual_machine" "windows_vm_domaincontroller" {
-  name  = "${var.resource_prefix}-DC"
+  name  = "${var.resource_prefix}-dc"
   location              = azurerm_resource_group.windows_rg.location
   resource_group_name   = azurerm_resource_group.windows_rg.name
   network_interface_ids = [azurerm_network_interface.dc_nic.id]
   size                  = var.vmsize
-  admin_username        = var.adminuser
-  admin_password        = var.adminpassword
+  admin_username        = var.domadminuser
+  admin_password        = var.domadminpassword
 
   os_disk {
     caching              = "ReadWrite"
@@ -189,7 +191,7 @@ resource "azurerm_windows_virtual_machine" "windows_vm_domaincontroller" {
   source_image_reference {
     publisher = "MicrosoftWindowsServer"
     offer     = "WindowsServer"
-    sku       = "2016-Datacenter"
+    sku       = "2019-Datacenter"
     version   = "latest"
   }
 
@@ -249,7 +251,7 @@ resource "azurerm_virtual_machine_extension" "join-domain" {
     {
         "Name": "${var.active_directory_domain}",
         "OUPath": "",
-        "User": "${var.active_directory_domain}\\${var.adminuser}",
+        "User": "${var.active_directory_domain}\\${var.domadminuser}",
         "Restart": "true",
         "Options": "3"
     }
@@ -257,7 +259,7 @@ SETTINGS
 
   protected_settings = <<SETTINGS
     {
-        "Password": "${var.adminpassword}"
+        "Password": "${var.domadminpassword}"
     }
 SETTINGS
 }

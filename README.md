@@ -1,18 +1,17 @@
 # ActiveDirectory Lab
 
-This repository contains resources to quickly create an Active Directory lab in Azure to demonstrate common security flaws in an Active Directory domain. Terraform is used to automatically promote the DC and join the member server.
+This repository contains resources to quickly create an Active Directory lab in Azure with terraform.
+
+**Warning:** the purpose of this repo is to create a **LAB** environment. Do not use in production!
 
 ## Contents
 
-### terraform
 - main.tf
   - the main terraform config file (don't edit unless you know what u are doing)
 - variables.tf
   - definition of all variables used in main.tf (you don't want to edit this too)
 - terraform.tfvars
   - use this file to set the variables defined in variables.tf. That's the file you want to edit :-)
-  
-### scripts
 
 ## Usage
 
@@ -50,3 +49,9 @@ Note:
 If you are done playing with AD, just run the following to remove all resources.
 
 terraform destroy
+
+## Getting an azure account
+
+You can create a free azure subscription with 170€ credits for 30 days using this link:
+
+[https://azure.microsoft.com/en-us/free/](https://azure.microsoft.com/en-us/free/)
