@@ -48,7 +48,9 @@ Note:
 
 If you are done playing with AD, just run the following to remove all resources.
 
+```
 terraform destroy
+```
 
 ## Getting an azure account
 
