@@ -51,6 +51,12 @@ If you are done playing with AD, just run the following to remove all resources.
 ```
 terraform destroy
 ```
+## Credentials
+
+The credentials for the default domain admin account are:
+
+**Username:** adminuser
+**Password:** P@ssw0rd123!!!
 
 ## Getting an azure account
 
