@@ -48,7 +48,6 @@ resource "azurerm_public_ip" "windows_public_ip" {
   location            = azurerm_resource_group.windows_rg.location
   resource_group_name = azurerm_resource_group.windows_rg.name
   allocation_method   = "Dynamic"
-  domain_name_label = "${var.resource_prefix}-${format("%02d", count.index)}"
 
   tags = var.tags
 }
@@ -79,7 +78,6 @@ resource "azurerm_public_ip" "dc_public_ip" {
   location            = azurerm_resource_group.windows_rg.location
   resource_group_name = azurerm_resource_group.windows_rg.name
   allocation_method   = "Dynamic"
-  domain_name_label = "${var.resource_prefix}-dc"
   tags = var.tags
 }
 
