@@ -7,76 +7,128 @@ provider "azurerm" {
 }
 
 ##########################################################
-# Create base infrastructure
+# Create base infrastructure for DC
 ##########################################################
 
 # resource group
-resource "azurerm_resource_group" "windows_rg" {
-  name     = "${var.resource_prefix}-RG"
-  location = var.node_location
+resource "azurerm_resource_group" "dc_rg" {
+  name     = "${var.resource_prefix}-DC-RG"
+  location = var.node_location_dc
   tags = var.tags
 }
 
 # virtual network within the resource group
-resource "azurerm_virtual_network" "windows_vnet" {
-  name                = "${var.resource_prefix}-vnet"
-  resource_group_name = azurerm_resource_group.windows_rg.name
-  location            = var.node_location
-  address_space       = var.node_address_space
-  dns_servers         = [cidrhost(var.node_address_prefix, 10)]
+resource "azurerm_virtual_network" "dc_vnet" {
+  name                = "${var.resource_prefix}-dc-vnet"
+  resource_group_name = azurerm_resource_group.dc_rg.name
+  location            = var.node_location_dc
+  address_space       = var.node_address_space_dc
+  dns_servers         = [cidrhost(var.node_address_prefix_dc, 10)]
   tags = var.tags
 }
 
 # subnet within the virtual network
-resource "azurerm_subnet" "windows_subnet" {
-  name                 = "${var.resource_prefix}-subnet"
-  resource_group_name  = azurerm_resource_group.windows_rg.name
-  virtual_network_name = azurerm_virtual_network.windows_vnet.name
-  address_prefixes       = [var.node_address_prefix]
+resource "azurerm_subnet" "dc_subnet" {
+  name                 = "${var.resource_prefix}-dc-subnet"
+  resource_group_name  = azurerm_resource_group.dc_rg.name
+  virtual_network_name = azurerm_virtual_network.dc_vnet.name
+  address_prefixes       = [var.node_address_prefix_dc]
 
 }
+
+##########################################################
+# Create base infrastructure for member server
+##########################################################
+
+# resource group
+resource "azurerm_resource_group" "member_rg" {
+  name     = "${var.resource_prefix}-MEMBER-RG"
+  location = var.node_location_member
+  tags = var.tags
+}
+
+# virtual network within the resource group
+resource "azurerm_virtual_network" "member_vnet" {
+  name                = "${var.resource_prefix}-member-vnet"
+  resource_group_name = azurerm_resource_group.member_rg.name
+  location            = var.node_location_member
+  address_space       = var.node_address_space_member
+  dns_servers         = [cidrhost(var.node_address_prefix_dc, 10)]
+  tags = var.tags
+}
+
+# subnet within the virtual network
+resource "azurerm_subnet" "member_subnet" {
+  name                 = "${var.resource_prefix}-member-subnet"
+  resource_group_name  = azurerm_resource_group.member_rg.name
+  virtual_network_name = azurerm_virtual_network.member_vnet.name
+  address_prefixes       = [var.node_address_prefix_member]
+
+}
+
+##########################################################
+# Configure VNET peering
+##########################################################
+
+resource "azurerm_virtual_network_peering" "member2dc" {
+  name                         = "${var.resource_prefix}-peering-member2dc"
+  resource_group_name          = azurerm_resource_group.member_rg.name
+  virtual_network_name         = azurerm_virtual_network.member_vnet.name
+  remote_virtual_network_id    = azurerm_virtual_network.dc_vnet.id
+  allow_virtual_network_access = true
+  allow_forwarded_traffic      = false
+  allow_gateway_transit        = false
+}
+
+resource "azurerm_virtual_network_peering" "dc2member" {
+  name                         = "${var.resource_prefix}-peering-dc2member"
+  resource_group_name          = azurerm_resource_group.dc_rg.name
+  virtual_network_name         = azurerm_virtual_network.dc_vnet.name
+  remote_virtual_network_id    = azurerm_virtual_network.member_vnet.id
+  allow_virtual_network_access = true
+  allow_forwarded_traffic      = false
+  allow_gateway_transit        = false
+}
+
 
 ##########################################################
 # Create vm components
 ##########################################################
 
 # public ips - member server
-resource "azurerm_public_ip" "windows_public_ip" {
+resource "azurerm_public_ip" "member_public_ip" {
   count = var.node_count
   name  = "${var.resource_prefix}-${format("%02d", count.index)}-PublicIP"
-  #name = "${var.resource_prefix}-PublicIP"
-  location            = azurerm_resource_group.windows_rg.location
-  resource_group_name = azurerm_resource_group.windows_rg.name
+  location            = azurerm_resource_group.member_rg.location
+  resource_group_name = azurerm_resource_group.member_rg.name
   allocation_method   = "Dynamic"
 
   tags = var.tags
 }
 
 # network interfaces - member server
-resource "azurerm_network_interface" "windows_nic" {
+resource "azurerm_network_interface" "member_nic" {
   count = var.node_count
-  #name = "${var.resource_prefix}-NIC"
   name                = "${var.resource_prefix}-${format("%02d", count.index)}-NIC"
-  location            = azurerm_resource_group.windows_rg.location
-  resource_group_name = azurerm_resource_group.windows_rg.name
+  location            = azurerm_resource_group.member_rg.location
+  resource_group_name = azurerm_resource_group.member_rg.name
   tags = var.tags
-  #
 
   ip_configuration {
     name      = "internal"
-    subnet_id = azurerm_subnet.windows_subnet.id
+    subnet_id = azurerm_subnet.member_subnet.id
     #private_ip_address_allocation = "Dynamic"
     private_ip_address_allocation = "static"
-    private_ip_address            = cidrhost(var.node_address_prefix, 100+count.index)
-    public_ip_address_id          = element(azurerm_public_ip.windows_public_ip.*.id, count.index)
+    private_ip_address            = cidrhost(var.node_address_prefix_member, 100+count.index)
+    public_ip_address_id          = element(azurerm_public_ip.member_public_ip.*.id, count.index)
   }
 }
 
 # public ip - dc
 resource "azurerm_public_ip" "dc_public_ip" {
   name = "${var.resource_prefix}-DC-PublicIP"
-  location            = azurerm_resource_group.windows_rg.location
-  resource_group_name = azurerm_resource_group.windows_rg.name
+  location            = azurerm_resource_group.dc_rg.location
+  resource_group_name = azurerm_resource_group.dc_rg.name
   allocation_method   = "Dynamic"
   tags = var.tags
 }
@@ -84,26 +136,26 @@ resource "azurerm_public_ip" "dc_public_ip" {
 # network interface - dc
 resource "azurerm_network_interface" "dc_nic" {
   name = "${var.resource_prefix}-DC-NIC"
-  location            = azurerm_resource_group.windows_rg.location
-  resource_group_name = azurerm_resource_group.windows_rg.name
+  location            = azurerm_resource_group.dc_rg.location
+  resource_group_name = azurerm_resource_group.dc_rg.name
   tags = var.tags
 
   ip_configuration {
     name      = "internal"
-    subnet_id = azurerm_subnet.windows_subnet.id
+    subnet_id = azurerm_subnet.dc_subnet.id
     #private_ip_address_allocation = "Dynamic"
     private_ip_address_allocation = "static"
-    private_ip_address            = cidrhost(var.node_address_prefix, 10)
+    private_ip_address            = cidrhost(var.node_address_prefix_dc, 10)
     public_ip_address_id          = azurerm_public_ip.dc_public_ip.id
   }
 }
 
-# NSG
-resource "azurerm_network_security_group" "windows_nsg" {
+# NSG member server
+resource "azurerm_network_security_group" "member_nsg" {
 
   name                = "${var.resource_prefix}-NSG"
-  location            = azurerm_resource_group.windows_rg.location
-  resource_group_name = azurerm_resource_group.windows_rg.name
+  location            = azurerm_resource_group.member_rg.location
+  resource_group_name = azurerm_resource_group.member_rg.name
 
   # Security rule can also be defined with resource azurerm_network_security_rule, here just defining it inline.
   security_rule {
@@ -121,10 +173,40 @@ resource "azurerm_network_security_group" "windows_nsg" {
 
 }
 
-# Subnet and NSG association
-resource "azurerm_subnet_network_security_group_association" "windows_subnet_nsg_association" {
-  subnet_id                 = azurerm_subnet.windows_subnet.id
-  network_security_group_id = azurerm_network_security_group.windows_nsg.id
+# Subnet and NSG association member server
+resource "azurerm_subnet_network_security_group_association" "member_subnet_nsg_association" {
+  subnet_id                 = azurerm_subnet.member_subnet.id
+  network_security_group_id = azurerm_network_security_group.member_nsg.id
+
+}
+
+# NSG DC
+resource "azurerm_network_security_group" "dc_nsg" {
+
+  name                = "${var.resource_prefix}-NSG"
+  location            = azurerm_resource_group.dc_rg.location
+  resource_group_name = azurerm_resource_group.dc_rg.name
+
+  # Security rule can also be defined with resource azurerm_network_security_rule, here just defining it inline.
+  security_rule {
+    name                       = "Inbound"
+    priority                   = 100
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "3389"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
+  tags = var.tags
+
+}
+
+# Subnet and NSG association DC
+resource "azurerm_subnet_network_security_group_association" "dc_subnet_nsg_association" {
+  subnet_id                 = azurerm_subnet.dc_subnet.id
+  network_security_group_id = azurerm_network_security_group.dc_nsg.id
 
 }
 
@@ -143,14 +225,14 @@ resource "time_sleep" "wait_300_seconds" {
 ##########################################################
 
 # VM object for member server - will create X server based on the node_count variable in terraform.tfvars
-resource "azurerm_windows_virtual_machine" "windows_vm" {
+resource "azurerm_windows_virtual_machine" "member_vm" {
   count = var.node_count
   name  = "${var.resource_prefix}-${format("%02d", count.index)}"
   #name = "${var.resource_prefix}-VM"
-  location              = azurerm_resource_group.windows_rg.location
-  resource_group_name   = azurerm_resource_group.windows_rg.name
-  network_interface_ids = [element(azurerm_network_interface.windows_nic.*.id, count.index)]
-  size                  = var.vmsize
+  location              = azurerm_resource_group.member_rg.location
+  resource_group_name   = azurerm_resource_group.member_rg.name
+  network_interface_ids = [element(azurerm_network_interface.member_nic.*.id, count.index)]
+  size                  = var.vmsize_member
   admin_username        = var.adminuser
   admin_password        = var.adminpassword
 
@@ -174,10 +256,10 @@ resource "azurerm_windows_virtual_machine" "windows_vm" {
 #VM object for the DC - contrary to the member server, this one is static so there will be only a single DC
 resource "azurerm_windows_virtual_machine" "windows_vm_domaincontroller" {
   name  = "${var.resource_prefix}-dc"
-  location              = azurerm_resource_group.windows_rg.location
-  resource_group_name   = azurerm_resource_group.windows_rg.name
+  location              = azurerm_resource_group.dc_rg.location
+  resource_group_name   = azurerm_resource_group.dc_rg.name
   network_interface_ids = [azurerm_network_interface.dc_nic.id]
-  size                  = var.vmsize
+  size                  = var.vmsize_dc
   admin_username        = var.domadminuser
   admin_password        = var.domadminpassword
 
@@ -237,7 +319,7 @@ SETTINGS
 
 resource "azurerm_virtual_machine_extension" "join-domain" {
   count = var.node_count
-  virtual_machine_id   = azurerm_windows_virtual_machine.windows_vm[count.index].id
+  virtual_machine_id   = azurerm_windows_virtual_machine.member_vm[count.index].id
   name                 = "join-domain"
   publisher            = "Microsoft.Compute"
   type                 = "JsonADDomainExtension"
@@ -265,7 +347,7 @@ SETTINGS
 resource "azurerm_virtual_machine_extension" "disable_fw_member" {
   depends_on = [azurerm_virtual_machine_extension.join-domain]
   count = var.node_count
-  virtual_machine_id   = azurerm_windows_virtual_machine.windows_vm[count.index].id
+  virtual_machine_id   = azurerm_windows_virtual_machine.member_vm[count.index].id
   name                 = "disable_fw"
   publisher            = "Microsoft.Compute"
   type                 = "CustomScriptExtension"

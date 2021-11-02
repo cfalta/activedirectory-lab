@@ -1,25 +1,8 @@
-# azure location
-
-variable "node_location" {
-  type = string
-}
-
+## General stuff
 # prefix for your lab, this will be prepended to all resources
 
 variable "resource_prefix" {
   type = string
-}
-
-# vnet address space
-
-variable "node_address_space" {
-  default = ["10.10.0.0/16"]
-}
-
-# subnet range
-
-variable "node_address_prefix" {
-  default = "10.10.10.0/24"
 }
 
 # tags to apply to all resources
@@ -29,15 +12,60 @@ variable "tags" {
   type        = map(string)
 }
 
-# how many vms to create
+## Variables for DC
+# azure location for dc
 
-variable "vmsize" {
+variable "node_location_dc" {
   type = string
 }
+
+# vnet address space
+
+variable "node_address_space_dc" {
+  default = ["10.100.0.0/16"]
+}
+
+# subnet range
+
+variable "node_address_prefix_dc" {
+  default = "10.100.100.0/24"
+}
+
+variable "vmsize_dc" {
+  type = string
+}
+
+## Variables for member server
+# azure location for member server
+
+variable "node_location_member" {
+  type = string
+}
+
+# vnet address space
+
+variable "node_address_space_member" {
+  default = ["10.200.0.0/16"]
+}
+
+# subnet range
+
+variable "node_address_prefix_member" {
+  default = "10.200.200.0/24"
+}
+
+variable "vmsize_member" {
+  type = string
+}
+
+
+# how many vms to create
 
 variable "node_count" {
   type = number
 }
+
+# local admin credentials
 
 variable "adminpassword" {
   type = string
@@ -48,7 +76,7 @@ variable "adminuser" {
 }
 
 
-# Active Directory & Domain Controller
+## Active Directory 
 
 #fqdn of the domain
 

@@ -59,6 +59,12 @@ The credentials for the default domain admin account are:
 
 **Password:** P@ssw0rd123!!!
 
+The credentials for the default local admin account are:
+
+**Username:** adminuser
+
+**Password:** P@ssw0rd123!
+
 ## Getting an azure account
 
 You can create a free azure subscription with 170€ credits for 30 days using this link:
