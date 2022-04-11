@@ -118,7 +118,7 @@ resource "azurerm_network_interface" "member_nic" {
     name      = "internal"
     subnet_id = azurerm_subnet.member_subnet.id
     #private_ip_address_allocation = "Dynamic"
-    private_ip_address_allocation = "static"
+    private_ip_address_allocation = "Static"
     private_ip_address            = cidrhost(var.node_address_prefix_member, 100+count.index)
     public_ip_address_id          = element(azurerm_public_ip.member_public_ip.*.id, count.index)
   }
@@ -144,7 +144,7 @@ resource "azurerm_network_interface" "dc_nic" {
     name      = "internal"
     subnet_id = azurerm_subnet.dc_subnet.id
     #private_ip_address_allocation = "Dynamic"
-    private_ip_address_allocation = "static"
+    private_ip_address_allocation = "Static"
     private_ip_address            = cidrhost(var.node_address_prefix_dc, 10)
     public_ip_address_id          = azurerm_public_ip.dc_public_ip.id
   }
